@@ -1,0 +1,21 @@
+﻿@* @model String протестировать как будет работать с и без этой строки *@
+@using System.Text.Json
+@model JsonResult
+@{
+    ViewData["Title"] = "Person Data";
+    var json = Json.Serialize(@Model);
+}
+
+<div class="text-center">
+    <form action="~/GetData/Mobile" method="post">
+        <label for="mobile">Enter phone number</label>
+        <input type="tel" name="mobile"  value="+628" >
+        <button type="submit">GetData</button>        
+    </form>
+    <Div id="JsonData" class="text-center">
+        @* Data we get from api response (JSON) *@
+        <pre>
+            @Html.Raw(json)
+        </pre>
+    </Div>
+</div>
