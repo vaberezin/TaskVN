@@ -53,9 +53,7 @@ namespace TaskVN.Controllers
             
             HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{_appUrl}/0/rest/InfintoPortalService/GetClientInfo");
             HttpClientHandler clientHandler = new HttpClientHandler();
-            var abc =_authCookie.GetCookies(new Uri(_appUrl));
-            var def =_authCookie.GetCookies(new Uri(_authServiceUrl));
-
+            
             clientHandler.CookieContainer = _authCookie;            
             clientHandler.UseCookies = true;            
 
