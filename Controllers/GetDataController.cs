@@ -15,6 +15,8 @@ namespace TaskVN.Controllers
     {
         //Create authcookie container
         CookieContainer _authCookie;
+        CookieContainer _authorizeCookie = new CookieContainer();
+
         string _appUrl;// = @"https://interview.mfi-ap.asia";
         string _authServiceUrl;// = @"https://interview.mfi-ap.asia/ServiceModel/AuthService.svc/Login";
         string _userName;// = "interview";
@@ -29,7 +31,7 @@ namespace TaskVN.Controllers
             _authServiceUrl = @"https://interview.mfi-ap.asia/ServiceModel/AuthService.svc/Login";
             _userName = "interview";
             _userPassword = "AAaaa11!";
-            TryLogin(_userName, _userPassword, _authServiceUrl); //bad idea
+            TryLogin(); //bad idea
         }
 
         //Getting authentication cookie
@@ -40,10 +42,10 @@ namespace TaskVN.Controllers
         }
 
         [HttpPost]
-        public IActionResult Mobile(string phoneNumber) //get number, use it to retrieve JSON, then return it to View, then display it in the div.
+        public IActionResult Mobile(string mobile) //get number, use it to retrieve JSON, then return it to View, then display it in the div.
         {
             // 1st - get JsonData 
-            JsonResult JsonData = GetJsonDataFromAPI(new PhoneNumber {mobile = phoneNumber}, _appUrl).Result;            
+            JsonResult JsonData = GetJsonDataFromAPI(new PhoneNumber {mobile = mobile}, _appUrl).Result;            
             // 2nd - post it to view and handle it there in the view.
             return View(JsonData);
         }
@@ -54,8 +56,8 @@ namespace TaskVN.Controllers
             HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, $"{_appUrl}/0/rest/InfintoPortalService/GetClientInfo");
             HttpClientHandler clientHandler = new HttpClientHandler();
             
-            clientHandler.CookieContainer = _authCookie;            
-            clientHandler.UseCookies = true;            
+            clientHandler.CookieContainer = _authorizeCookie;            
+            //clientHandler.UseCookies = true;            
 
             using (HttpClient client = new HttpClient(clientHandler))
             {
@@ -65,7 +67,7 @@ namespace TaskVN.Controllers
                 //create model of phoneNumber with server side validation, add client-side validation, get json from response
                  
                 HttpResponseMessage responseMessage = await client.SendAsync(requestMessage); // Getting 403 Here
-                responseMessage.EnsureSuccessStatusCode();
+                 
                 String stringContent = await responseMessage.Content.ReadAsStringAsync(); // may be not needed
 
                 JsonResult JsonData = new JsonResult(stringContent); //check this
@@ -76,16 +78,13 @@ namespace TaskVN.Controllers
 
         
         // Try to login and set cookie to enable Requests to external API
-        public void TryLogin(string _userName, string _userPassword, string _authServiceUrl)
-        {  //returns response with tokens/keys
-
+        public void TryLogin() {
             var authData = @"{
                 ""UserName"":""" + _userName + @""",
                 ""UserPassword"":""" + _userPassword + @"""
             }";
             var request = CreateRequest(_authServiceUrl, authData);
             _authCookie = new CookieContainer();
-            
             request.CookieContainer = _authCookie;
             // Upon successful authentication, we save authentication cookies for
             // further use in requests to Creatio. In case of failure
@@ -103,7 +102,14 @@ namespace TaskVN.Controllers
                         {
                             throw new UnauthorizedAccessException($"Unauthorized {_userName} for {_appUrl}");
                         }
-                    }                
+                    }
+                    string authName = ".ASPXAUTH";
+                    string authCookeValue = response.Cookies[authName].Value;
+                    string csrfName = "BPMCSRF";
+                    string csrfCookeValue = response.Cookies[csrfName].Value;
+                    _authorizeCookie.Add(new Uri(_appUrl), new Cookie(authName, authCookeValue));
+                    _authorizeCookie.Add(new Uri(_appUrl), new Cookie(csrfName, csrfCookeValue));
+
                 }
             }
         }
@@ -114,6 +120,7 @@ namespace TaskVN.Controllers
             request.ContentType = "application/json";
             request.Method = "POST";
             request.KeepAlive = true;
+            request.Headers.Add("ForceUseSession", "true");
             if (!string.IsNullOrEmpty(requestData))
             {
                 using (var requestStream = request.GetRequestStream())
